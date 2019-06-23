@@ -1,0 +1,374 @@
+#####################################################
+# Chapter 5:  Value of Plays Using Run Expectancy
+#
+# Data Sets Used =  all2001.csv, fields.csv, roster2011.csv
+library(plyr) 
+library(MASS)
+#
+#####################################################
+
+##################################################
+# 5.2  Runs Scored in the Remainder of the Inning
+##################################################
+
+all2011 <- read.csv("all2011.csv", header=FALSE)
+fields <- read.csv("fields.csv")
+names(all2011) <- fields[, "Header"]
+#???
+fangraphs$hypRA <- with(fangraphs, (ERA*G)/IP)
+fangraphs$hypK9 <- with(fangraphs, (`K/9`*G)/IP)
+fangraphs$totalmoveFB <- fangraphs$`FA-X`*fangraphs$`FA-Z`
+fangraphs$totalmoveSL <- fangraphs$`SL-X`*fangraphs$`SL-Z`
+fangraphs$summ<- with(fangraphs, paste(Team, W, "-", L))
+#creates new variable named summ
+#puts team name and W-L record in that new variable column
+fangraphs$plhard <- fangraphs$BABIP*fangraphs$Hard_perc
+
+RUNS.SCORED.INNING <- aggregate(fangraphs$hypRA, 
+                        list(WAR = fangraphs$WAR), sum)
+#creats new table
+#column 1 = WAR = list of all players' WAR values
+#column 2 = x (no name) = hypRA
+
+RUNS.SCORED.START <- aggregate(fangraphs$hypK9, 
+                       list(Clutch = fangraphs$Clutch), "[", 1)
+#creats new table
+#column 1 = Clutch = list of all players' Clutch values
+#column 2 = x (no name) = hypK9
+
+MAX <- data.frame(RA=fangraphs$hypRA, 
+                  K9=fangraphs$hypK9)
+
+MAX$diff <- fangraphs$hypK9 + fangraphs$hypRA
+fangraphs <- merge(fangraphs, MAX)
+#BE CAREFUL WITH THIS
+
+N <- ncol(fangraphs)
+#number of columns in the fangraphs table
+names(fangraphs)[N] <- "MAX.RUNS"
+#renames the LAST column in the fangraphs table MAX.RUNS
+names(fangraphs)[57] <- "MIN.RUNS"
+#renames the 57th column in the fangraphs table MIN.RUNS
+fangraphs$reversediff <- fangraphs$MAX.RUNS - fangraphs$MIN.RUNS
+
+##################################################
+# 5.3  Creating the Matrix
+##################################################
+fan_graphs$runner1 <- ifelse(fan_graphs$FBv > 94, 1, 0)
+fan_graphs$runner2 <- ifelse(fan_graphs$`K/9` > 10, 1, 0)
+fan_graphs$runner3 <- ifelse(fan_graphs$Clutch > 0, 1, 0)
+fan_graphs$outs <- ((fan_graphs$TBF/fan_graphs$IP)*9)/fan_graphs$`K/9`
+
+get.state <- function(runner1, runner2, runner3, outs){
+  runners <- paste(runner1, runner2, runner3, sep="-")
+  paste(runners, outs)                      
+}
+#new function named get.state, activated with the variables runner1, runner2, runner3, and outs
+#creates new variable 'runners' and paste the value for runner1, runner2, runner3, and seperate it by a -
+#pastes the number of runners, outs as the output
+
+fan_graphs$runnera <- ifelse(fan_graphs$Team=="Brewers", 1, 0)
+fan_graphs$runnerb <- ifelse(fan_graphs$Team=="Astros", 1, 0)
+fan_graphs$runnerc <- ifelse(fan_graphs$Team=="Cubs", 1, 0)
+
+fan_graphs$rating <- get.state(fan_graphs$runner1, fan_graphs$runner2, 
+                  fan_graphs$runner3, round(fan_graphs$outs, 3))
+
+NRUNNER1 <- with(fan_graphs, as.numeric(runner1==1 | runnera==1))
+#new value NRUNNER1 that returns the value 1 if runner1 or runner a is true
+NRUNNER2 <- with(fan_graphs, as.numeric(runner2==2 | runnerb==2))
+#new value NRUNNER2 that returns the value 1 if runner2 or runner b is true
+NRUNNER3 <- with(fan_graphs, as.numeric(runner3==3 | runnerc==3))
+#new value NRUNNER3 that returns the value 1 if runner3 or runner c is true
+NOUTS <- with(fan_graphs, WAR + outs)
+#new value NOUTS that returns WAR + outs 
+
+fan_graphs$NEW <- get.state(NRUNNER1, NRUNNER2, NRUNNER3, NOUTS)
+#new variable NEW in the fan_graphs table
+#adds NRUNNER1 + NRUNNER2 + NRUNNER3 + NOUTS together
+
+fannypack <- subset(fan_graphs, (fan_graphs$runner1!=fan_graphs$runnera) | (fan_graphs$runner2!=fan_graphs$runnerb) |
+                      (fan_graphs$runner3!=fan_graphs$runnerc) | (fan_graphs$Clutch>0))
+#new subsetted table 
+#runner1 must be = to runnera, runner2 must be = to runnerb, and runner3 must be = to runnerc
+#Clutch must be > 0
+
+#format for ! (logical expression): fangraphs$runner1!=fangraphs$runnera....will return TRUE/FALSE depending on if the 2 variables are equal to each other
+
+library(plyr)
+fantastic <- ddply(fan_graphs, .(WAR, outs), 
+                   summarize, myrating = sum(outs-WAR))
+#OR
+fantastic <- ddply(fan_graphs, .(WAR, outs), 
+                   summarize, myrating = outs - WAR)
+
+#new subtable named fantastic
+#1st column = WAR (3conditions + rating)
+#2nd column = outs
+#3nd column = outs- WAR renamed as myrating
+#format: ddply(table, (variable1, variable2), summarize, new var name = agg fxn(variable, na.rm= TRUE))
+#example: ddply(master, .(name, team)), summarize, mean_rbi = mean(rbi, na.rm=TRUE))
+# putting x before () allows us to list those variables WITHOUT quotes
+#ddply() used for aggregate fxns within subsetted tables
+
+fanatic <- ddply(fan_graphs, .(wFB, FBv, wSL, SLv), 
+                 summarize, diffw = wFB-wSL, diffv = FBv-SLv)
+
+fan <- merge(fantastic, fanatic)
+#BE CAREFUL WITH THIS
+
+fan <- subset(fantastic, myrating > 3)
+
+meanstable <- with(fan_graphs, aggregate(fan_graphs, list(Team), mean))
+#creates new means table from fan_graphs table
+#aggregates the fangraphs table by team name and takes the mean of all measurements
+
+fan_graphs$myrating <- substr(fan_graphs$NEW, 7, 10)
+#takes a substring of the NEW variable
+#starts new variable @ the 7th character and ends new variable @ the 10th character
+
+RATING <- fan_graphs[order(fan_graphs$myrating), ]
+#creates new table, which is pretty much the same, except it is ordered by the myrating variable
+
+RATING.matrix <- matrix(RATING$myrating, 2, 2, 
+                        dimnames= list(c("Hello", "World"),
+                                       c("Welcome", "All")))
+#makes a 2x2 matrix for the 1st 4 values in the myrating variable in the RATING table
+#names the ROWS Hello and World
+#names the COLUMNS Welcome and All
+
+dimnames(RATING.matrix)[[2]] <- c("Fastball", "Slider")
+#renames the COLUMNS of the matrix Fastball and Slider
+dimnames(RATING.matrix)[[1]] <- c("NL", "AL")
+#renames the ROWS of the matrix NL and AL
+
+RUNS.2002 <- matrix(c(.51, 1.40, 1.14,  1.96, .90, 1.84, 1.51, 2.33,
+               .27,  .94,  .68,  1.36, .54, 1.18,  .94, 1.51,
+               .10,  .36,  .32,   .63, .23, .52,   .45, .78),
+               8, 3)
+#Practice Matrix w/ the following 24 values....specifies an 8x3 matrix (rowsxcolumns) at the end
+
+
+MY.matrix <- matrix(RATING$WAR, 2, 2,
+                    dimnames= list(c("Ball", "Bat"),
+                                   c("Pitcher", "Hitter")))
+
+dimnames(MY.matrix) <- dimnames(RATING.matrix)
+#renames the MY.matrix names to the RATING.matrix names
+
+cbind(RATING.matrix, MY.matrix)
+#combines both 2x2 matrixes into 1 2x4 matrix
+
+##################################################
+# 5.4  Measuring Success of a Batting Play
+##################################################
+
+FG <- matrix(c(fan_graphs$WAR), 2, 2)
+GF <- matrix(c(fan_graphs$Clutch), 2, 2)
+             
+dimnames(FG)[[1]] <- c("NFL", "NBA")
+dimnames(FG)[[2]] <- c("Cubs", "Cardinals") 
+dimnames(GF) <- dimnames(FG)
+
+
+fanatic$XMOVE <- fan_graphs$`FA-X` - fan_graphs$`SL-X`
+fanatic$ZMOVE <- fan_graphs$`FA-Z` - fan_graphs$`SL-Z`
+
+##################################################
+# 5.5  Albert Pujols
+##################################################
+
+Roster <- read.csv("roster2011.csv")
+
+closers <- subset(teams_top_closers, Wpct > .5)$playerID
+#creates a new string of values (NOT a table) 
+#returns all playerIDs that have Wpct > .50 from the teams_top_closers table
+
+kimbrel.id <- as.character("kimbrcr01")
+#creates a new value named kimbrel.id for the string sequence "kimbrcr01"
+
+kimbrel <- subset(teams_top_closers, playerID==kimbrel.id)
+#creates a subsetted table named kimbrel
+#condition = playerID must equal the new characterid we just created for Kimbrel's playerID
+
+kimbrel <- subset(kimbrel, yearID >= 2012)
+#respecifies table constraints
+
+kimbrel[1:3]
+#returns the 1st, 2nd, and 3rd columns of the kimbrel table
+
+kimbrel$wp <- substr(kimbrel$Wpct, 2, 4)
+#makes new variable (wp) which takes the 2nd-4th characters in the Wpct variable
+
+table(kimbrel$lgID)
+#returns the frequencies for the leagues Kimbrel was in from 2012-2014
+AA AL FL NA NL PL UA 
+0  0  0  0  3  0  0
+
+with(kimbrel, stripchart(logWratio ~ RA + R, vertical=TRUE, jitter=0.2,
+                        xlab="RA+R", method="jitter", pch=1, cex = 0.8))
+#creates scatterplot w/ logWratio as Y axis and RA+R as x axis (x explains y)
+abline(h=.1)
+#horizontal line through y axis @ point 0.1
+
+K.runs <- aggregate(kimbrel$RA, list(kimbrel$yearID), sum)
+#creates new table...year as the grouping variable in column 1
+#RA in column 2 (the sum would be taken if multiple enteries for a single year)
+
+names(K.runs)[1] <- "YR"
+#renames column 1 in the new K.runs table as YR
+names(K.runs)[2] <- "RA"
+#renames column 2 in the new K.runs table as RA
+
+K.RA <- aggregate(kimbrel$RA, list(kimbrel$teamID), length)
+#creates new table...team as the grouping variable in column 1 
+#The LENGTH of the RA number will be in column 2 
+
+names(K.RA)[1] <- "TEAM"
+names(K.RA)[2] <- "Digits of RA"
+
+K <- merge(K.RA, K.runs)
+#merges K.RA w/ K.runs
+#shows year, team, RA, and digits in the RA number
+K
+
+sum(K$RA)
+#returns the SUM of RA in the new K table
+
+##################################################
+# 5.6  Opportunity and Success for All Hitters
+##################################################
+
+data2011b <- subset(data2011, BAT_EVENT_FL == TRUE)
+
+errors.sums <- aggregate(Fields$E, list(Fields$teamID), sum)
+#sums E for each team in the league and creates new table
+dp.sums <- aggregate(Fields$DP, list(Fields$teamID), sum)
+#sums E for each team in the league and creates new table
+wp.sums<- aggregate(Fields$WP, na.rm=TRUE, list(Fields$teamID), sum)
+#sums WP for each team in the league and creates new table 
+
+names(errors.sums) <- c("Team", "Errors")
+names(dp.sums) <- c("Team", "Double Plays")
+names(wp.sums) <- c("Team", "Wild Pitches")
+#renames columns in each of the new tables
+
+errors.dp.wp <- merge(errors.sums, dp.sums)
+errors.dp.wp <- merge(errors.dp.wp, wp.sums)
+#how to merge 3 tables
+
+plot(errors.dp.wp$Errors, errors.dp.wp$`Wild Pitches`)
+plot(errors.dp.wp$`Wild Pitches`, errors.dp.wp$`Double Plays`)
+plot(errors.dp.wp$Errors, errors.dp.wp$`Double Plays`)
+
+with(errors.dp.wp, lines(lowess(Errors, `Wild Pitches`)))
+#lowess line (smoothing) to go with plot number 1
+
+abline(h=mean(errors.dp.wp$`Wild Pitches`))
+#horizontal line that goes through the mean total for WP
+abline(v=mean(errors.dp.wp$Errors))
+#vertical line that goes through the mean total for Errors
+
+##################################################
+# 5.7  Position in the Batting Lineup
+##################################################
+
+position <- sapply(fan_graphs$WAR, fivenum)
+#makes a new value called position and lists the 5num summary for all WAR values in fan_graphs table
+
+EWPPlot <- plot(errors.dp.wp$Errors, errors.dp.wp$`Wild Pitches`)
+lines(lowess(errors.dp.wp$Errors, errors.dp.wp$`Wild Pitches`))
+abline(v=mean(errors.dp.wp$Errors))
+
+points(errors.dp.wp$Errors, errors.dp.wp$`Wild Pitches`, pch=19, cex=3)
+#for big ass points on the plot
+
+##################################################
+# 5.8 Run Values of Different Base Hits
+##################################################
+
+brewers2018 <- subset(fan_graphs, Team=="Brewers")
+
+table(brewers2018$WAR)
+
+round(prop.table(table(brewers2018$WAR)), 3)
+#returns a table of the PROPORTIONS of the variable in question
+round(prop.table(table(fan_graphs$Team)), 2)
+
+library(MASS)
+truehist(fan_graphs$WAR)
+#returns blue histogram of POPORTIONS of a certain variable
+
+subset(fan_graphs, WAR==max(WAR))[1, 
+      c("Name", "Team", "K/9", "WAR")]
+#returns a subset of the fan_graphs table
+#the row returned will be the MAX WAR
+#the columns returned from this selected row will be Name, Team, K/9, and WAR
+
+subset(fan_graphs, FBv==min(FBv))[1, 
+      c("Name", "Team", "ERA", "FIP")]
+#returns a subset of the fan_graphs table
+#the row returned will be the MIN FBv
+#the columns returned from this selected row will be Name, Team, ERA, and FIP
+
+mean.WAR <- mean(fan_graphs$WAR)
+mean.WAR
+
+abline(v = mean.WAR, lwd=3)
+#puts a vertical line through the mean WAR value from the sample
+
+text(2, .2, "Mean WAR", pos=2)
+#places the text "Mean WAR" at the coordinates 2,.25
+
+cardinals2018 <- subset(fan_graphs, Team == "Cardinals")
+#library(MASS)
+truehist(cardinals2018$WAR)
+
+table(fan_graphs$Team)
+
+subset(fan_graphs, wFB== max(wFB))[1, 
+      c("Name", "wFB", "WAR")]
+
+subset(fan_graphs, wFB == min(wFB))[1,
+      c("Name", "wFB", "WAR")]
+
+mean.wFB <- mean(fan_graphs$wFB)
+mean.wFB
+
+abline(v = mean.wFB, lwd=3)
+
+text(20, .02, "Mean wFB", pos=2)
+
+##################################################
+# 5.9  Value of Base Stealing
+##################################################
+
+stealing <- subset(Fields, SB >0 | CS >0)
+
+table(stealing$SB)
+
+table(stealing$CS)
+
+#library(MASS)
+truehist(stealing$SB)
+truehist(stealing$CS)
+
+stealing.MIL <- subset(stealing, teamID=="MIL")
+
+table(stealing.MIL$WP)
+#table of all WP amounts for MIL
+
+with(stealing.MIL, table(playerID))
+#table of all playerIDs in the new stealing.MIL table
+
+meansSB <- mean(stealing.MIL$SB)
+meansCS <- mean(stealing.MIL$CS)
+meansSB/(meansSB + meansCS)
+#success rate of 72.56%
+
+#######################################################
+
+
+
+
+
