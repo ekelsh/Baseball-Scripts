@@ -1,0 +1,249 @@
+##############################################
+# Chapter 3 Traditional Graphics
+#
+# Data Sets Used = hofbatting.csv, all1998.csv,
+#                 fields.csv, retrosheetIDs.csv
+#   plus .csv files from the Lahman's database
+#        
+# 
+##############################################
+
+# Section 3.1 Introduction
+
+hof <- read.csv("hofbatting.csv")
+
+hofbatting$MidCareer <- with(hofbatting, (From + To) / 2)
+#new variable 'MidCareer' computed by adding the 'From' column to the 'To' column and dividing by 2
+
+hofbatting$Era <- cut(hofbatting$MidCareer,
+        breaks = c(1800, 1900, 1919, 1941, 1960, 1976, 1993, 2050),
+        labels = c("19th Century", "Lively Ball", "Dead Ball",
+                    "Integration", "Expansion", "Free Agency", 
+                    "Long Ball"))
+#creates new variable ERA
+#breaks the MidCareer variable up by certain era
+#labels each break with a "string"
+
+T.Era <- table(hofbatting$Era)   #creates a table with just the ERA variable
+T.Era   #shows newly created table + frequencies for all strings
+
+barplot(T.Era)
+barplot(table(hofbatting$Era), xlab="Era", ylab="Frequency",      #same outcome, diff command + added ammenities
+        main="Era of the Nonpitching Hall of Famers")
+
+plot(table(hofbatting$Era)) #or plot(T.Era)
+pie(table(hofbatting$Era))   #piechart
+
+# Section 3.3 Saving Graphs
+
+png("../output/bargraph.png")
+barplot(table(hofbatting$Era), xlab="Era", ylab="Frequency",
+        main="Era of the Nonpitching Hall of Famers")
+dev.off()
+
+pdf("../output/graphs.pdf")
+barplot(table(hof$Era))
+plot(table(hof$Era))
+dev.off()
+
+# Section 2.4 Dot plots
+
+T.Era <- table(hofbatting$Era)
+dotchart(as.numeric(T.Era), labels=names(T.Era), xlab="Frequency")
+#dotchart using the string variables in the T.Era table
+#y labels = ERA strings
+#frequency on x axis
+
+hof.500 <- subset(hofbatting, HR >= 500 | OPS >= 1.00)   #or
+hof.500 <- subset(hofbatting, HR >= 500 & OPS >= 1.00)  #and
+hof.500 <- hof.500[order(hof.500$OPS), ]   #orders the new hofbatting subset table
+dotchart(hof.500$OPS, labels=hof.500$X, xlab="OPS")
+#dotcharrt of OPS frequencies with the OPS labels
+
+
+# Section 2.5 Numeric Variable: Stripchart and Histogram
+
+windows(width=7, height=3.5)
+stripchart(hofbatting$MidCareer, method="jitter", pch=1, 
+           xlab="Mid Career")
+#dotplot/scatterplot like chart
+#uses the MidCareer variable
+dev.off()
+
+hist(hofbatting$MidCareer, xlab="Mid Career", main="")
+#histogram of MidCareer variable
+
+hist(hofbatting$MidCareer, xlab="Mid Career", main="",
+     breaks=seq(1880, 2000, by=20))
+#same histogram, BUT x axis starts @ 1880, ends @ 2000 and goes up by 20yr incriments
+
+
+# Section 2.6 Two Numeric Variables
+
+with(hofbatting, plot(MidCareer, OPS))
+#plots MidCareer vs OPS from the hofbatting table
+with(hofbatting, lines(lowess(MidCareer, OPS, f=0.3)))
+#adds lowess line (smoothing/moving avg line) to the existing chart
+with(hofbatting, identify(MidCareer, OPS, n=4))
+  #... identify points on the plot by mouse-clicking 
+  #... then press ESC
+  #shows values of points of interest on the chart if you click on them
+
+with(hofbatting, plot(OBP, SLG))
+
+with(hofbatting, plot(OBP, SLG, xlim=c(0.25, 0.50), 
+               ylim=c(0.28, 0.75), pch=19,
+               xlab="On Base Percentage",
+               ylab="Slugging Percentage"))
+#same chart, different command + ammenities
+#x axis starts @ .25 and ends @ .50, y axis starts @ .28 and ends @ .75
+
+
+curve(.7 - x, add = TRUE)  #adds line w/ .7 slope
+curve(.8 - x, add = TRUE)
+curve(.9 - x, add = TRUE)
+curve(1.0 - x, add = TRUE)
+
+text(.27, .42, "OPS = 0.7")  #adds text "OPS..." @ the x,y coordinate listed
+text(.27, .52, "OPS = 0.8")
+text(.27, .62, "OPS = 0.9")
+text(.27, .72, "OPS = 1.0")
+
+with(hofbatting, identify(OBP, SLG, n=6))
+  #... identify points on the plot by mouse-clicking 
+  #... then press ESC
+  #identifies the points of interest we click directly on the chart/graph
+
+# Section 3.7 A Numeric Variable and a Factor Variable
+
+hofbatting$HR.Rate <- with(hofbatting, HR / AB)
+#adds new HR.Rate variable to hofbatting table
+#format.....with(table name, variable name)
+
+stripchart(HR.Rate ~ Era, data=hofbatting)
+#strip chart with HR.Rate as the dots on the chart
+#Era labels on the y-axis....HR.Rates on the x-axis
+
+par(plt = c(.2, .94, .145, .883))
+stripchart(HR.Rate ~ Era, data = hofbatting, 
+          method="jitter", pch=1, las=2)
+#strip chart with HR.Rate as the data on the chart
+#Era labels on the y-axis...HR.Rates on the x-axis
+
+par(plt=c(.2, .94, .145, .883))
+boxplot(HR.Rate ~ Era, data=hofbatting, las=2,
+        horizontal=TRUE, xlab="HR Rate")
+#boxplot with HR.Rate as the variable of interest
+#Era labels on the y-axis....horizontally oriented
+
+# Section 3.8 Comparing Ruth, Aaron, Bonds, and A-Rod
+
+master <- read.csv("lahman/Master.csv")
+
+getinfo <- function(nameFirst, nameLast){
+  playerline <- subset(Master, nameFirst==nameFirst & nameLast==nameLast)
+  name.code <- as.character(playerline$playerID)
+  birthyear <- playerline$birthYear
+  birthmonth <- playerline$birthMonth
+  birthday <- playerline$birthDay
+  byear <- ifelse(birthmonth <= 6, birthyear, birthyear + 1)
+  list(name.code=name.code, byear=byear)}
+#function called getinfo....will start when we enter firstname and lastname
+#1st variable created = playerline, which is a subset of the master table
+#2nd, 3rd, & 4th variables created = birthyear, birthmonth, & birthday
+##last variable created = byear....
+
+
+ruth.info <- getinfo("Babe", "Ruth")
+aaron.info <- getinfo("Hank", "Aaron")
+bonds.info <- getinfo("Barry", "Bonds")
+arod.info <- getinfo("Alex", "Rodriguez")
+ruth.info
+
+batting <- read.csv("lahman/Batting.csv")
+
+ruth.data <- subset(Batting, playerID == ruth.info$name.code)
+ruth.data$age <- ruth.data$yearID - ruth.info$byear    #does not work
+
+aaron.data <- subset(Batting, playerID == aaron.info$name.code)
+aaron.data$age <- aaron.data$yearID - aaron.info$byear  #does not work
+bonds.data <- subset(Batting, playerID == bonds.info$name.code)
+bonds.data$age <- bonds.data$yearID - bonds.info$byear    #does not work
+arod.data <- subset(Batting, playerID == arod.info$name.code)
+arod.data$age <- arod.data$yearID - arod.info$byear    #does not work
+
+cumsum(c(1, 2, 3, 4))   #will return 1, 3, 6, 10
+
+with(ruth.data, plot(cumsum(SO), cumsum(HR), 
+                     xlab= "SO", ylab= "HR"))
+
+with(aaron.data, lines(cumsum(SO), cumsum(HR), lty=2, lwd=2))
+#adds dotted line to current plot (the ruth plot previously made)
+#???
+with(bonds.data, lines(cumsum(SO), cumsum(HR), lty=1, lwd=2))
+#adds dotted line to current plot (the ruth plot previously made)
+#???
+with(arod.data, lines(cumsum(SO), cumsum(HR), lty=4, lwd=2))
+#adds dotted line to current plot (the ruth plot previously made)
+#???
+legend(20, 700, legend=c("Bonds", "Aaron", "Ruth", "ARod"),
+       lty=1 : 4, lwd=2)
+#adds legent to current plot (the ruth plot previously made)
+#???
+
+
+# Section 3.9 The 1998 Home Run Race
+
+data1998 <- read.csv("all1998.csv", header=FALSE)
+fields <- read.csv("fields.csv")
+names(all1998) <- fields[, "Header"]
+#???
+retro.ids <- read.csv("retrosheetIDs.csv")
+
+sosa.id <- as.character(subset(retro.ids,
+                               FIRST=="Sammy" & LAST=="Sosa")$ID)
+#????
+mac.id <- as.character(subset(retro.ids,
+                              FIRST=="Mark" & LAST=="McGwire")$ID)
+#????
+sosa.data <- subset(all1998, BAT_ID == sosa.id)
+mac.data <- subset(all1998, BAT_ID == mac.id)
+#????
+createdata <- function(d){
+  d$Date <- as.Date(substr(d$GAME_ID, 4, 11),
+                    format="%Y%m%d")
+  d <- d[order(d$Date), ]
+  d$HR <- ifelse(d$EVENT_CD == 23, 1, 0)
+  d$cumHR <- cumsum(d$HR)
+  d[, c("Date", "cumHR")]
+}
+#????
+
+mac.hr <- createdata(mac.data)
+sosa.hr <- createdata(sosa.data)
+head(sosa.hr, 3)    #default for head = 6 results
+#???
+
+plot(hof.500$HR, type="l", lwd=2, main= "Home Run Frequency HOF", ylab="Home Runs")
+
+lines(hof.500$HR[which(hof.500$X2 == "Ernie Banks HOF")], lwd=2, col="grey")
+#creates line for the HR variable for Earnie Banks
+
+abline(h=10, lty=650)
+#format= abline(a=, b=, h=, v=,coef=)
+#a/b=intercept + slope
+#h= yvalues for horizontal  lines | v= xvalues for vertical lines  (draws vertical/horizontal lines @ specified coordinates)
+#coef= vector of length giving the intercept and slope
+
+text(2, 750, "Hello")
+#adds text @ x,y coordinate 2,750 that says Hello
+#adds to current graph
+
+legend(2, 700, legend=c("McGwire (70)", "Sosa (66)"),
+       lwd=3, col=c("red", "blue"))
+#adds legend @ x,y coordinate 2,700
+#adds to current graph
+#lwd refers to the thickness of the lines in the legend (higher # = thicker)
+#col refers to the colors of the lines in the legend (red and blue)
+
+#########################################################
