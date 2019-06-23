@@ -1,0 +1,365 @@
+###############################
+# Chapter 6 - Advanced Graphics
+# 
+# required packages: 
+library(lattice)
+library(ggplot2)
+library(jpeg)
+# 
+# Data Sets Used: 
+#   balls_strikes_count.Rdata  - cabrera table (2009-2012) + sanchez table (2009-2012) + umpires (2012) + verlander (2009-2012)
+#   Comerica.jpg 
+#
+#############################
+
+# Section 6.1 Introduction
+
+load("balls_strikes_count.Rdata")
+
+# Section 6.2 The lattice Package
+
+library(lattice)
+
+trellis.par.set(canonical.theme(color = FALSE))
+#to set the theme to produce b/w figure (to be used for reproducing the book plots)
+
+sampleRows <- sample(1:nrow(verlander), 20)
+#will create a new variable under the Values tab
+#will return 20 random row NUMBERS
+
+verlander[sampleRows,]
+#will show 20 sample COMPLETE rows of verlander table
+
+
+histogram(~ speed, data = verlander)
+#histogram of speed (velocity) for verlander
+
+densityplot(~ speed, data = verlander, plot.points = FALSE)
+#density plot of speed
+
+densityplot(~ speed | pitch_type, data = verlander, layout=c(1,5)
+            , plot.points = F)
+#...conditional to pitch type...5 represents 5 groups (seperate density plot per group)
+densityplot(~ speed | batter_hand, data = verlander, layout=c(1,2)
+            , plot.points = F)
+#...conditional to batter handedness...2 represents 2 groups (seperate density plot per group)
+
+densityplot(~ speed, data = verlander, groups = pitch_type,
+            plot.points = FALSE,
+            auto.key = TRUE)
+#...superposing (groups overlayed on top of one another)
+densityplot(~ speed, data = verlander, groups = batter_hand,
+            plot.points = FALSE,
+            auto.key = TRUE)
+#...superposing (groups overlayed on top of one another)
+#scatterplots of speed trends
+
+FFverlander <- subset(verlander, pitch_type == "FF")
+#subset on four-seam fastballs
+
+FFverlander$gameday <- as.integer(format(FFverlander$gamedate, format="%j"))
+#new variable to indicate the day of the year
+
+dailySpeed <- aggregate(speed ~ gameday + season, data = FFverlander
+                        , FUN = mean)
+#new table named dailySpeed
+#mean speed by day of the year
+# variables included = speed, season, gameday
+
+
+xyplot(speed ~ gameday | factor(season),
+       data = dailySpeed,
+       xlab = "day of the year",
+       ylab = "pitch speed (mph)")
+#scatter plot of day of year v pitch speed seperated by season
+
+
+#Verlander's fastball/change-up speed differential
+FFCHverlander <- subset(verlander, pitch_type %in% c("FF", "CH"))
+#subset Four-seamers and change-ups
+
+avgspeedFC <- aggregate(speed ~ pitch_type + season,
+                        data = FFCHverlander, FUN = mean)
+#new table for average speed by season and pitch type
+#3 columns = pitch type, season, and speed
+#speed as a function of pitch type and season (how rows divided up)
+
+
+
+avgspeedFC <- droplevels(avgspeedFC)
+avgspeedFC
+#...to remove unused factor levels
+
+
+
+dotplot(factor(season) ~ speed, groups = pitch_type,
+        data = avgspeedFC,
+        pch = c("C", "F"), cex = 2)
+#dotplot that uses the factor 'season' as a function of speed and pitch type
+#speed on x axis, points differentiated by pitch type and overlayed on the same graph
+#season on the y axis
+#pch= what will be used to represent the points on the dotplot
+#for the pch command...can only use ONE letter, number, symbol, etc to represent the point (i.e. "!", "4", "C")
+
+avgSpeed <- aggregate(speed ~ pitches + season, data = FFverlander,
+                      FUN = mean)
+#new table named avgSpeed
+#columns = pitches, season, and speed
+#speed as a function of the number of pitches thrown in a given season
+#uses the mean function to get one speed value per pitch/season combo
+#average fastball speed by pitch count and season
+
+
+avgSpeedComb <- mean(FFverlander$speed)
+#...overall average speed for all of his 4seam FB (96mph)
+
+xyplot(speed ~ pitches | factor(season),
+       data = avgSpeed, pch="!")
+#scatterplot of all data in the avgSpeed table
+#pitches on the x axis, speed on the y axis, seperate plot per season (2009-2012)
+#uses exclamation points "!" to represent the plots on the charts
+
+xyplot(speed ~ pitches | factor(season),
+       data = avgSpeed, pch="!", FUN = mean(avgSpeed$speed))
+#same exact chart
+
+xyplot(speed ~ pitches | factor(season)
+       , data = avgSpeed
+       , panel = function(...){
+         panel.xyplot(...)
+         panel.abline(v = 100, lty = "dotted")
+         panel.abline(h = avgSpeedComb)
+         panel.text(25, 100, "avg. speed")
+         panel.arrows(25, 99.5, 0, avgSpeedComb
+                      , length = .1)
+       }
+)
+#add the refenece lines (and text + arrows)
+#adds dotted vertical line @ pitches = 100
+#adds solid horizontal line @ avgSpeedComb value (96mph)
+#adds "avg. speed" text @ 25,100 xy coordinates
+#adds arrows @ coordinates 25,99.5 x 0,96 (avgSpeedComb)
+#arrow coordinates = xy of start coordinates + xy end coordinates
+#length = ???
+
+
+#!!!
+#Building a lattice plot step-by-step
+
+NoHit <- subset(verlander, gamedate == "2011-05-07")
+#get data on Verlander's 2011 no-hitter on May 7th
+
+xyplot(pz ~ px | batter_hand, data=NoHit, groups=pitch_type,
+       auto.key = TRUE)
+#basic plot - vertical movement (y axis) as a fxn of horizontal movement (x axis)
+#seperate plots according to batter_hand
+#dots grouped by pitch_type (i.e. a different point shape will be assigned to each pitch type)
+
+xyplot(pz ~ px | batter_hand, data=NoHit, groups=pitch_type,
+       auto.key = TRUE,
+       aspect = "iso")
+#isometric scales - scales the chart better for visualization purposes
+
+xyplot(pz ~ px | batter_hand, data=NoHit, groups=pitch_type,
+       auto.key = TRUE,
+       aspect = "iso",
+       xlim = c(-2.2, 2.2),
+       ylim = c(0, 5),
+       xlab = "Horizontal Location\n(ft. from middle of plate)",
+       ylab = "Vertical Location\n(ft. from ground)")
+# limits and labels on axes
+
+pitchnames <- c("change-up", "curveball", "4S-fastball"
+                , "2S-fastball", "slider")
+#STEP 1: create a custom legend - make a vector with pitch names
+
+myKey <- list(space = "right",
+              border = TRUE,
+              cex.title = .8,
+              title = "pitch type",
+              text = pitchnames,
+              padding.text = 4
+)
+#STEP 2: define the boundaries of the strike zone
+#column 1 = space, border, cex.title, title, text, and padding.text
+#column 2 = type of variable each row is (i.e. character, logical, double, etc.)
+#column 3 = right, TRUE, .8, pitch type, pitchnames, 4
+
+topKzone <- 3.5   #new Value
+botKzone <- 1.6   #new Value
+inKzone <- -.95   #new Value
+outKzone <- 0.95  #new Value
+
+#putting it all together!!!
+
+xyplot(pz ~ px | batter_hand, data=NoHit, groups=pitch_type,
+       auto.key = myKey,
+       aspect = "iso",
+       xlim = c(-2.2, 2.2),
+       ylim = c(0, 5),
+       xlab = "horizontal location\n(ft. from middle of plate)",
+       ylab = "vertical location\n(ft. from ground)",
+       panel = function(...){
+         panel.xyplot(...)
+         panel.rect(inKzone, botKzone, outKzone, topKzone,
+                    border = "black", lty = 3)
+       }
+)
+#plot with pz (y axis) as a fxn of px (x axis) seperated by R v L batters and grouped by pitch type
+#x/y axis limits, x/y axis labels, and use of the previously used panel fxn
+#the points -0.95, 1.6, 0.95, 3.5 represent the points that will be connected via dotted line to make the strike zone box
+#i.e. inKzone, botKzone, ouKzone, topKzone
+
+#!!!!!!!
+
+
+
+
+# Section 6.3 The ggplot2 package
+
+
+sampleRows <- sample(1:nrow(cabrera), 20)
+cabrera[sampleRows,]
+#show sample of 20 rows of cabrera data.frame
+
+
+library(ggplot2)
+# load ggplot2 package
+
+#creating a plot by layer - step by step
+
+
+p0 <- ggplot(data = cabrera, aes(x = hitx, y = hity))
+#Step 1: map data to aesthetics (p0 won't produce a plot yet, just the general blueprint)
+
+p1 <- p0 + geom_point()
+p1
+#adds points to the plot and creates a new plot
+
+p0 <- ggplot(data = cabrera, aes(hitx, hity))
+#mapping outcome to color aesthetic for original plot (still won't produce plot, just the blueprint)
+
+p1 <- p0 + geom_point(aes(colour = hit_outcome))
+#adding points to the plot WITH COLOR
+#color will differ depending on the hit outcome 
+#hit x on x axis, hity on y axis
+
+p2 <- p1 + coord_equal() + scale_color_manual(values = c("yellow", "seagreen2", "red"))
+#imposes isometric scales and creates new plot
+#with scale_color_manual, we're able to manually choose colors (can skip this step)
+p2
+
+p3 <- p2 + facet_wrap(~ season)
+#produces separate plots by season
+p3
+
+bases <- data.frame(x = c(0, 90/sqrt(2), 0, -90/sqrt(2), 0),
+                    y = c(0, 90/sqrt(2), 2 * 90/sqrt(2), 90/sqrt(2), 0)
+)
+#prepare data for drawing basepaths
+#x values (column 1) = 0, 63.63, 0, -63.63, 0
+#y values (column 2) = 0, 63.63, 127.28, 63.63, 0
+
+p4 <- p3 + geom_path(data = bases, aes(x = x, y = y))
+#draws general box from home to 1st to 2nd to 3rd back to home
+p4 <- p4 +
+  geom_segment(x = 0, xend = 300, y = 0, yend = 300) +
+  geom_segment(x = 0, xend = -300, y = 0, yend = 300)
+#adds the foul lines
+
+
+#combining multiple aesthetics!!!
+
+cabreraStretch <- subset(cabrera, gamedate > "2012-08-31")
+#getting data for the final month of 2012
+
+p0 <- ggplot(data = cabreraStretch, aes(hitx, hity))
+#the basic blueprint
+
+p1 <- p0 + geom_point(aes(shape = hit_outcome, colour = pitch_type
+                          , size = speed))
+#multi-dementional scatter plot....
+#hitx n x axis, hity on y axis
+#size of dot dictated by speed of pitch
+#color of dot dictated by pitch type
+#shape of dot dictated by hit outcome
+
+p2 <- p1 + coord_equal()
+#condenses the plot slightly
+
+p3 <- p2 + geom_path(aes(x = x, y = y), data = bases)
+#creates path from home to 1st to 2nd to 3rd back to home
+
+p4 <- p3 + guides(col = guide_legend(ncol = 2))
+p4 <- p4 +
+  geom_segment(x = 0, xend = 300, y = 0, yend = 300) +
+  geom_segment(x = 0, xend = -300, y = 0, yend = 300)
+#adds fould lines
+
+
+
+ggplot(FFverlander, aes(pitches, speed)) +
+  facet_wrap(~ season) +
+  geom_line(stat = "hline", yintercept = "mean", lty = 3) +
+  geom_point(aes(pitches, speed),
+             data = FFverlander[sample(1:nrow(FFverlander), 1000),]) +
+               geom_smooth(col = "black") +
+               geom_vline(aes(xintercept = 100), col = "black", lty = 2)
+#scatter plot of speed (yaxis) v pitch count (xaxis) using FFverlander data
+#seperate scatter plot by season
+#smoothing line per plot
+#dotted vertical line going through x = 100
+
+
+
+#from cluttered scatter plot to hexagonal binning
+
+kZone <- data.frame(
+  x = c(inKzone, inKzone, outKzone, outKzone, inKzone)
+  , y = c(botKzone, topKzone, topKzone, botKzone, botKzone)
+)
+#putting strike zone boundaris in a data frame
+#column 1 = x, column 2 = y
+
+ggplot(FFverlander, aes(px, pz)) +
+  geom_point() +
+  facet_wrap(~ batter_hand) +
+  coord_equal() +
+  geom_path(aes(x, y), data = kZone, lwd = 2, col = "white")
+#cluttered scatter plot
+#px on x axis and pz on y axis
+#seperate plot her batter handedness (R L)
+##border based on the data we just input into the kZone chart
+
+#hexagonal binning
+#requires the package hexbin to be installed
+ggplot(FFverlander, aes(px, pz)) +
+  stat_binhex() +
+  facet_wrap(~ batter_hand) +
+  coord_equal() +
+  geom_path(aes(x, y), data = kZone, lwd = 2, col = "white", alpha = .3)
+#same concept as ggplot command right above...excpet using stat_binhex vs geom_point
+#adds a more aethetically pleasing format, color scheme, and layout vs ggplot package
+#px x axis v pz y axis, seperate plots per batter_hand
+#point color based on frequency, border resembles that of the strike zone we defined in kZone table
+
+
+library(jpeg) #or library(imager)
+#adding + loading a jpeg background image
+
+diamond <- system.file("Comerica.jpg")
+#load the Comerica Park diagram
+
+
+ggplot(cabrera, aes(hitx, hity)) +
+  coord_equal() +
+  annotation_raster(diamond, -310, 305, -100, 480) +
+  stat_binhex(alpha = .9, binwidth = c(5, 5)) +
+  scale_fill_gradient(low = "seagreen2", high = "plum")
+#spray chart overlaid on jpeg image
+#NOTE- could NOT get jpeg to overlay
+#remove annotation_raster command for a plot to show
+#will return scatter plot of hitx v hity
+#color will be dictated by frequency (seagreen2 and plum)
+
+###############################################################
