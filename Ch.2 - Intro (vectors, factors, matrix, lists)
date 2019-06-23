@@ -1,0 +1,277 @@
+##############################################
+# Chapter 2 - Introduction to R
+#
+# Data Sets Used = spahn.csv, NLbatting.csv,
+#                NLpitching.csv, munson.csv
+#                Batting.csv
+#
+
+library(plyr)
+
+###############################################
+
+##############################################
+# Section 2.3 Vectors, Factors, Matrix, Lists
+##############################################
+
+W <- c(8, 21, 15, 21, 21, 22, 14)   #new variable W
+L <- c(5, 10, 12, 14, 17, 14, 19)   #new variable L
+
+Win.Pct <- 100 * W / (W + L)   #new variable Win.Pct
+Win.Pct
+
+Year <- seq(1946, 1952)   #new variable Year (1946-1952)
+Year <- 1946 : 1952       #same command, different format
+
+Age <- Year - 1921        #new variable Age, which is the equivalent of the variable Year minus 1921
+plot(Age, Win.Pct)        #scatterplot of age on X and Win.Pct on Y
+
+mean(Win.Pct)   #returns the mean for Win.Pct
+
+100 * sum(W) / (sum(W) + sum(L))     #returns the Win.Pct for the entire data set
+
+sort(W)   #sorts the values in the W variable
+
+cumsum(W)    #cumulative sum of all W values (kinda irrelevant)
+
+summary(Win.Pct)   #min, Q1, Median, Mean, Q3, Max
+
+W[c(1, 2, 5)]    #retrieves the 1st, 2nd, and 5th values in the W variable column
+
+W[1:4]   #retrieves the 1st-4th values in the W variable column
+
+W[-c(1, 6)]   #retrieves the 6th - 1st values in reverse order
+
+Win.Pct > 60   #runs the question and TRUE or FALSE will appear if logical statement met or not
+
+(W > 20) & (Win.Pct > 60)    #uses & to include multiple conditions in the query
+
+Batting$playerID[which.max(Batting$HR)]   #returns playerID who had max # of homeruns  
+
+Year[W + L > 30]
+
+#########################################
+# Section 2.4 Creating/Modifying Matrices
+#########################################
+
+NL <- c("FLA", "STL", "HOU", "STL", "COL",
+        "PHI", "PHI", "SFG", "STL", "SFG")
+
+AL <- c("NYY", "BOS", "CHW", "DET", "BOS",
+        "TBR", "NYY", "TEX", "TEX", "DET")
+
+Winner <- c("NL", "AL", "AL", "NL", "NL",
+            "NL", "AL", "NL", "NL", "NL")
+
+N.Games <- c(6, 4, 4, 5, 4, 5, 6, 5, 7, 4)
+Year <- 2003 : 2012
+
+results <- matrix(c(NL, AL), 10, 2)   #creates a matrix with the variables AL and NL w/ 10 rows and 2 columns
+results
+
+dimnames(results)[[1]] <- Year   #puts the Year variable in the row labels in the matrix
+dimnames(results)[[2]] <- c("NL Team", "AL Team") #puts the strings "NL Team" and "AL Team" in the column labels in the matrix
+results
+
+table(Winner)
+
+barplot(table(Winner))
+
+table(NL)
+
+NL2 <- factor(NL, levels=c("FLA", "PHI", "HOU", "STL", "COL", "SFG"))
+#creates a factor variable... with the levels specified in the parenthesis
+str(NL2)
+
+table(NL2)
+
+World.Series <- list(Winner=Winner, Number.Games=N.Games,
+                     Seasons="2003 to 2012")
+#creates a list w/ variables "Winner", "Number.Games", and "Seasons"
+#keeps the Winner output the same
+#keeps the Number.Games output the same
+#puts the string "2003 to 2012" as the output for the Seasons variable
+#can use the list label like a table
+World.Series[[2]]
+#returns the 2nd variable in the World.Series list
+World.Series["Number.Games"]
+#same command different format
+
+# Section 2.5 Splitting Files and Functions
+
+################################################
+# illustration of a R script
+# put following code in a file "world.series.R
+# run by typing
+# source("World.Series.R", echo=TRUE)
+
+N.Games <- c(6, 4, 4, 5, 4, 5, 6, 5, 7, 4)  #new variable
+Winner <- c("NL", "AL", "AL", "NL", "NL",   #new variable
+            "NL", "AL", "NL", "NL", "NL")
+table(Winner)  #creates simple table
+barplot(table(Winner))   #creates simple barplot
+by(N.Games, Winner, summary)  #
+#variable of interst = N.Games
+#variable N.Games is split by = Winner
+#summary of the split results (min, max, median, mean, Q1, Q3)
+################################################
+
+hr.rates <- function(age, hr, ab){
+  rates <- round(100 * hr / ab, 1)
+  list(x=age, y=rates)
+}
+#when hr.rates(age, hr, ab) is entered (permitting all variables are created and have values)
+#a variable called rates will be created which will calculate the HR rate (HR/AB x 100)
+#then, a list will be created...1st will be named "x" and 2nd will be names "y"
+#x will keep the age variable the same
+#y will use the newly created Rates variable as output
+
+hr <- c(13, 23, 21, 27, 37, 52, 34, 42, 31, 40, 54)
+ab <- c(341, 549, 461, 543, 517, 533, 474, 519, 541, 527, 514)
+age <- 19 : 29
+hr.rates(age, hr, ab)   #experimenting with our new hr.rates function
+
+plot(hr.rates(age, hr, ab))   #scatterplot of our new function/list (x is age, y is hr rates)
+
+# Section 2.6 Creating Sub Tables
+
+getwd()
+
+spahn <- read.csv("spahn.csv")
+
+hr <- c(13, 23, 21, 27, 37, 52, 34, 42, 31, 40, 54)
+ab <- c(341, 549, 461, 543, 517, 533, 474, 519, 541, 527, 514)
+age <- 19 : 29
+hr.rates <- hr.rates(Age, HR, AB)
+Mantle <- cbind(age, hr, ab, rates=hr.rates$y)
+#combines the variables age, hr, ab, and hr.rates (renames it rates)
+#creates a new subtable
+
+write.csv(Mantle, "..\output\mantle.csv", row.names=FALSE)
+
+# Section 2.7 Data Frames
+
+spahn[1:3, 1:10]  #rows 1-3 and columns 1-10 in spahn table
+
+spahn[1, ] #1st row, all columns in spahn table
+
+spahn[1:10, c("Age", "W", "L", "ERA")] #1st 10 rows, Age, W, L, and ERA columns
+
+summary(spahn$ERA)  #summary of ERA column in spahn table
+
+spahn$Age[spahn$ERA == min(spahn$ERA)]  #age of the player with the min era in the spahn table
+
+#####################################
+
+spahn$FIP <- with(spahn, (13 * HR + 3 * BB - 2 * SO) / IP)  #creates new FIP variable in the spahn table
+
+pos <- order(spahn$FIP)  #creates new variable pos which is FIP ordered in ASC order
+
+head(spahn[pos, c("Year", "Age", "W", "L", "ERA", "FIP")], n=10)
+#returns 1st 10 values from the spahn table/pos variable
+#returns the Year, Age, W, L, ERA, and FIP columns
+
+spahn1 <- subset(spahn, Tm == "BSN" | Tm == "MLN")
+#creates a subset off of the spahn table named spahn1
+#will only return the rows where TM=BSN or Tm=MLN
+
+spahn1$Tm <- factor(spahn1$Tm, levels=c("BSN", "MLN"))
+#turns the TM variable into a factor w/ levels BSN and MLN
+
+by(spahn1[c("W","L", "ERA","WHIP","FIP")], spahn1$Tm, summary)
+#sphan1 = table of interest
+#variables of interest = W, L, ERA, WHIP, and FIP
+#variable to split it by is Tm (BSN or MLN)
+#summary gives Min, Median, Mean, Max, Q1, Q3
+
+NLbatting <- read.csv("NLbatting.csv")
+ALbatting <- read.csv("ALbatting.csv")
+NLALbatting <- rbind(NLbatting, ALbatting)
+#combines the NL and AL Batting Tables into a new table NLALbatting
+
+NLpitching <- read.csv("NLpitching.csv")
+NLcombo <- merge(NLbatting, NLpitching, by="Tm")
+#merges the NL Pitching and NL Batting tables into one big NLcombo table
+
+NL.150 <- subset(NLbatting, HR > 150)
+#new table (NL.150) that only includes batters with > 150 HRs
+
+# Section 2.8 Packages
+
+install.packages("Lahman")
+library(Lahman)
+?Batting
+
+# Section 2.9 Splitting, applying, and combining data
+
+Batting <- read.csv("Batting.csv")
+
+Batting.60 <- subset(Batting, yearID >= 1960 & yearID <= 1969)
+
+compute.hr <- function(pid){
+  d <- subset(Batting.60, PlayerID == pid)
+  sum(d$HR)
+}
+#creates a subset variable (d) from the Batting.60 table
+#creates a pid variable equal to the playerID number from the Batting.60 table
+#computes the sum of all HR in the new d table
+
+players <- unique(Batting.60$playerID)
+#new variable...players...for all unique playerIDs from Batting.60 table
+S <- sapply(players, compute.hr)
+#creates a new variable S, which takes the variable/list 'playes' and performs the function compute.hr on it
+
+R <- data.frame(Player=players, HR=S)
+#creates a new table named R
+#column 1 name = Players (equal to the variable players we just created)
+#column 2 name = HR (equal to the S variable we just created)
+
+R <- R[order(R$HR, decreasing=TRUE), ]   #orders the R table by most to least HRs
+head(R)   #returns the top 6 values (default) in the R table
+
+library(plyr)
+dataframe.AB <- ddply(Batting, .(playerID), summarize,
+                      Career.AB=sum(AB, na.rm=TRUE))
+#creates new data table (dataframe.AB) via the Batting table
+#returns the playerID column + new Career.AB column which = sum of AB (and accounts for NULL values)
+
+Batting <- merge(Batting, dataframe.AB, by="playerID")
+#merges the Batting and new dataframe.AB table by playerID into new Batting table
+
+Batting.5000 <- subset(Batting, Career.AB >= 5000)
+#new batting table for those w/ AB >= 5000
+
+ab.hr.so <- function(playerID){
+  c.AB <- sum(Batting.5000$AB, na.rm=TRUE)
+  c.HR <- sum(Batting.5000$HR, na.rm=TRUE)
+  c.SO <- sum(Batting.5000$SO, na.rm=TRUE)
+  data.frame(AB=c.AB, HR=c.HR, SO=c.SO)
+}
+#new function named ab.hr.so which requires the playerID variable
+#new variable c.AB which sums the AB in the Batting.5000 table
+#new variable c.HR which sums the HR in the Batting.5000 table
+#new variable c.SO which sums the SO in the Batting.5000 table
+#new table that combines all new variables
+
+
+aaron <- subset(Batting.5000, playerID == "aaronha01")
+ab.hr.so(aaron)
+#new table called aaron which is a subset of the Batting.5000 table
+#condition, playerID==aaronha01
+
+abhrso.5000 <- ddply(Batting.5000, .(playerID), ab.hr.so)
+#new table abhrso.5000 from the Batting.5000 table
+#keeps the playerID and returns all components from the ab.hr.so function from earlier, as well
+
+head(abhrso.5000)
+
+plot(abhrso.5000$HR/abhrso.5000$AB, abhrso.5000$SO/abhrso.5000$AB)
+lines(lowess(abhrso.5000$HR/abhrso.5000$AB, abhrso.5000$SO/abhrso.5000$AB))
+
+# Section 2.10 Getting Help
+
+?dotchart
+
+??dotchart
+
+##################################################################
