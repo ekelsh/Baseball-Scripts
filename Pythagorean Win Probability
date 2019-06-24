@@ -1,0 +1,35 @@
+#Bill James Pythagorean Algebra
+  #W% = W/(W+L) = Runs^2 / (Runs^2 + Runs Allowed^2)
+  #W% = W/l = Runs^2/Runs Allowed^2
+
+#Trying to find the best exponent for (R/RA)2   (2 becomes M)
+
+#Log Transformation
+  #Log(W/L) = M * Log(R/RA)
+  #y = m * x (+ e)
+      #y is Log(W/L)
+      #m is exponent we're trying to find  (slope)
+      #x is Log(R/RA)
+      #e is error
+
+#Step 1: Basic Scatter Plot
+plot(Sab101$RunsRatio, Sab101$WinRatio, main= "Runs Ration v. Win Ratio")
+
+#Step 2: Add Log Transformation
+WinRatioLog = with(Sab101, log(WinRatio))
+RunsRatioLog = with(Sab101, log(RunsRatio))
+
+#Step 3: Scatter Log of Log Transformed Variables
+plot(WinRatioLog, RunsRatioLog, main= "Log Runs Ration v. Log Win Ratio")
+
+#Step 4: Run Linear Model
+LogModel <- lm(WinRatioLog ~ RunsRatioLog)
+LogModel
+#Coefficient in RunsRatioLog reveals slope of best fit line (1.867)
+#This Coefficient Becomes the exponent in our *new* Pythagorean Theorem
+
+newpythag = exp(Sab101$R/Sab101$RA)
+newpythag
+
+
+
