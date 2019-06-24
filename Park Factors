@@ -1,0 +1,51 @@
+#Park Factors
+PF = (Home RS+Home RA)/HomeG  /  (RoadRS+RoadRA)/RoadG   x100
+
+#a way to do a COUNTIF, first get TRUE FALSE matrix, sum TRUEs
+sum(Attendance$home == "BOS", na.rm = TRUE) 
+
+# Split Home (Fenway) games vs. Away
+park <- subset(Attendance, home == "BOS")
+away <- subset(Attendance, visitor == "BOS")
+nrow(park)    # another COUNTIF after making a subset of data frame
+nrow(away)
+
+# Calculate ratios of Total HR / Total AB
+# Sum of Home and Visitor stats are used to avoid bias from park home team's ability
+park_ratio <- sum(park$home_hr + park$visitor_hr) / 
+  sum(Attendance$home == "BOS")
+away_ratio <- sum(away$home_hr + away$visitor_hr) / 
+  sum(Attendance$visitor == "BOS")
+
+sox_hr_pf <- 100 * park_ratio / away_ratio
+sox_hr_pf
+
+# Now we'll generalize this into a function that works for any batting stat
+
+# One stat for one team function
+pf_stat <- function(team, stat, data) {
+  park <- subset(data, home == team)
+  away <- subset(data, visitor == team)
+  
+  # Build strings for accessing proper PF stat
+  home_stat = paste("home", stat, sep="_")
+  visitor_stat = paste("visitor", stat, sep="_")
+
+  # Calculate ratios of Total Stat / Total AB
+  # Sum of Home and Visitor stats are used to avoid bias from park home team's ability
+  park_ratio <- sum(park[[home_stat]] + park[[visitor_stat]]) / 
+    sum(data$home == team)
+  away_ratio <- sum(away[[home_stat]] + away[[visitor_stat]]) / 
+    sum(data$visitor == team)
+  
+  return (100 * (park_ratio / away_ratio))
+}
+
+sox_hr_pf_2 <- pf_stat("BOS", "hr", soxHR)
+
+
+# Test that we get the same HR PF for the 2013 Red Sox as calculated before
+stopifnot(sox_hr_pf==sox_hr_pf_2)
+
+#Run CLE HR Park Factors with our function
+cle_hr_pf <- pf_stat("CLE", "hr", soxHR)
