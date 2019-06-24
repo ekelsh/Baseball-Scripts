@@ -1,0 +1,44 @@
+#Random Attendance Model Beta
+
+Attendance$doubleheader = ifelse(Attendance$game_number>0,1,0)
+
+#model attendance with home team
+attendanceModel = lm(Attendance$attendance ~ Attendance$home)
+summary(attendanceModel)
+#Anaheim is used as the reference value since HOME is categorical variable
+
+#add visiting team
+attendanceModel = lm(Attendance$attendance ~ Attendance$home + Attendance$visitor)
+summary(attendanceModel)
+
+#add day of week
+attendanceModel = lm(Attendance$attendance ~ 
+                  Attendance$home + Attendance$visitor  + 
+                  Attendance$day)
+summary(attendanceModel)
+
+#add day/night
+attendanceModel = lm(Attendance$attendance ~ Attendance$home + 
+                       Attendance$visitor  + Attendance$day + 
+                       Attendance$daynight)
+summary(attendanceModel)
+
+#add total score
+Attendance$total_score = Attendance$home_score + Attendance$visitor_score
+attendanceModel = lm(Attendance$attendance ~ Attendance$home + Attendance$visitor  + 
+                       Attendance$day + Attendance$daynight + Attendance$total_score)
+summary(attendanceModel)
+
+#add total home runs
+Attendance$total_hr = Attendance$home_hr + Attendance$visitor_hr
+attendanceModel = lm(Attendance$attendance ~ Attendance$home + Attendance$visitor  + 
+                       Attendance$day + Attendance$daynight + Attendance$total_score + 
+                       Attendance$total_hr)
+summary(attendanceModel)
+#look, total score effect went away!
+
+#add doubleheader indicator
+attendanceModel = lm(Attendance$attendance ~ Attendance$home + Attendance$visitor  + 
+                       Attendance$day + Attendance$daynight + Attendance$total_score + 
+                       Attendance$total_hr + Attendance$doubleheader)
+summary(attendanceModel)
